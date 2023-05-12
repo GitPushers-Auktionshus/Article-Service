@@ -8,8 +8,7 @@ namespace ArticleServiceAPI.Model
     public class Article
     {
         [BsonId]
-        [BsonElement(elementName: "_id")]
-        public ObjectId ArticleID { get; set; }
+        public string ArticleID { get; set; }
         public string? Name { get; set; }
         public bool NoReserve { get; set; }
         public float EstimatedPrice { get; set; }

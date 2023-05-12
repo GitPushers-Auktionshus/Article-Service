@@ -21,11 +21,18 @@ public class ArticleServiceController : ControllerBase
     private readonly string _secret;
     private readonly string _issuer;
     private readonly string _connectionURI;
-    private readonly string _databaseName;
-    private readonly string _collectionName;
+
+    private readonly string _usersDatabase;
+    private readonly string _inventoryDatabase;
+
+    private readonly string _userCollectionName;
+    private readonly string _articleCollectionName;
+    private readonly string _auctionHouseCollectionName;
 
 
-    private readonly IMongoCollection<Article> _articles;
+    private readonly IMongoCollection<User> _userCollection;
+    private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
+    private readonly IMongoCollection<Article> _articleCollection;
     private readonly IConfiguration _config;
 
     public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config)
@@ -36,26 +43,32 @@ public class ArticleServiceController : ControllerBase
         _secret = config["Secret"] ?? "Secret missing";
         _issuer = config["Issuer"] ?? "Issue'er missing";
         _connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
-        _databaseName = config["DatabaseName"] ?? "DatabaseName missing";
-        _collectionName = config["CollectionName"] ?? "CollectionName missing";
 
+        // User database and collections
+        _usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
+        _userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
+        _auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
 
+        // Inventory database and collection
+        _inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
+        _articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
 
-        _logger.LogInformation($"ArticleService variables: Secret: {_secret}, Issuer: {_issuer}, ConnectionURI: {_connectionURI}, DatabaseName: {_databaseName}, CollectionName: {_collectionName}");
+        _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
+        _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
 
         try
         {
             // Client
             var mongoClient = new MongoClient(_connectionURI);
-            _logger.LogInformation($"[*] CONNECTION_URI: {_connectionURI}");
 
-            // Database
-            var database = mongoClient.GetDatabase(_databaseName);
-            _logger.LogInformation($"[*] DATABASE: {_databaseName}");
+            // Databases
+            var userDatabase = mongoClient.GetDatabase(_usersDatabase);
+            var inventoryDatabase = mongoClient.GetDatabase(_inventoryDatabase);
 
-            // Collection
-            _articles = database.GetCollection<Article>(_collectionName);
-            _logger.LogInformation($"[*] COLLECTION: {_collectionName}");
+            // Collections
+            _userCollection = userDatabase.GetCollection<User>(_userCollectionName);
+            _articleCollection = inventoryDatabase.GetCollection<Article>(_articleCollectionName);
+            _auctionHouseCollection = inventoryDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
 
         }
         catch (Exception ex)
@@ -67,26 +80,40 @@ public class ArticleServiceController : ControllerBase
 
     //POST - Adds a new article
     [HttpPost("addArticle")]
-    public async Task AddArticle(ArticleDTO article)
+    public async Task<IActionResult> AddArticle(ArticleDTO articleDTO)
     {
-        //_logger.LogInformation("\nMetoden: AddArticle(Article article) kaldt klokken {DT}", DateTime.UtcNow.ToLongTimeString());
+        _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
 
-        Article effekt = new Article
+        User buyer = new User();
+        buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
+
+        User seller = new User();
+        seller = await _userCollection.Find(x => x.UserID == articleDTO.SellerID).FirstOrDefaultAsync<User>();
+
+        Auctionhouse auctionhouse = new Auctionhouse();
+        auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
+
+
+        Article article = new Article
         {
-            ArticleID = article.ObjectId.GenerateNewId().ToString(),
-            Name = article.Name,
-            NoReserve = article.NoReserve,
-            EstimatedPrice = article.EstimatedPrice,
-            Description = article.Description,
-            Category = article.Category,
-            Sold = article.Sold,
-            Auctionhouse = article.Auctionhouse.AuctionhouseID,
-            MinPrice = article.MinPrice
+            ArticleID = ObjectId.GenerateNewId().ToString(),
+            Name = articleDTO.Name,
+            NoReserve = articleDTO.NoReserve,
+            EstimatedPrice = articleDTO.EstimatedPrice,
+            Description = articleDTO.Description,
+            Images = new List<Image>(),
+            Category = articleDTO.Category,
+            Sold = articleDTO.Sold,
+            Auctionhouse = auctionhouse,
+            Seller = seller,
+            MinPrice = articleDTO.MinPrice,
+            Buyer = buyer
         };
 
-        await _articles.InsertOneAsync(effekt);
 
-        return;
+        await _articleCollection.InsertOneAsync(article);
+
+        return Ok(article);
     }
 
 

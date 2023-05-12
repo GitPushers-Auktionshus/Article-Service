@@ -9,8 +9,7 @@ namespace ArticleServiceAPI.Model
     public class Image
     {
         [BsonId]
-        [BsonElement(elementName: "_id")]
-        public ObjectId ImageID { get; set; }
+        public string ImageID { get; set; }
         public string FileName { get; set; }
         public string ImagePath { get; set; }
         [BsonElement]
