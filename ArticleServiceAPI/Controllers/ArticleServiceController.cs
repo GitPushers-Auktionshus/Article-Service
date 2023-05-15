@@ -40,18 +40,31 @@ public class ArticleServiceController : ControllerBase
         _logger = logger;
         _config = config;
 
-        _secret = config["Secret"] ?? "Secret missing";
-        _issuer = config["Issuer"] ?? "Issue'er missing";
-        _connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
+        //_secret = config["Secret"] ?? "Secret missing";
+        //_issuer = config["Issuer"] ?? "Issue'er missing";
+        //_connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
+
+        //// User database and collections
+        //_usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
+        //_userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
+        //_auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
+
+        //// Inventory database and collection
+        //_inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
+        //_articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
+
+
+
+        _connectionURI = "mongodb://admin:1234@localhost:27018/";
 
         // User database and collections
-        _usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
-        _userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
-        _auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
+        _usersDatabase = "Users";
+        _userCollectionName = "user";
+        _auctionHouseCollectionName = "auctionhouse";
 
         // Inventory database and collection
-        _inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
-        _articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
+        _inventoryDatabase = "Inventory";
+        _articleCollectionName = "article";
 
         _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
         _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
@@ -68,7 +81,7 @@ public class ArticleServiceController : ControllerBase
             // Collections
             _userCollection = userDatabase.GetCollection<User>(_userCollectionName);
             _articleCollection = inventoryDatabase.GetCollection<Article>(_articleCollectionName);
-            _auctionHouseCollection = inventoryDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
+            _auctionHouseCollection = userDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
 
         }
         catch (Exception ex)
@@ -76,28 +89,6 @@ public class ArticleServiceController : ControllerBase
             _logger.LogError($"Fejl ved oprettelse af forbindelse: {ex.Message}");
             throw;
         }
-    }
-
-    [HttpGet("getAuctionhouse/{id}")]
-    public async Task<IActionResult> GetAuctionHouse(string id)
-    {
-        _logger.LogInformation($"Sendt ID= {id}");
-
-        try
-        {
-            Auctionhouse auctionhouse = new Auctionhouse();
-
-            auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == id).FirstOrDefaultAsync<Auctionhouse>();
-
-            return Ok(auctionhouse);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
-
-            throw;
-        }
-
     }
 
     //POST - Adds a new article
@@ -117,7 +108,7 @@ public class ArticleServiceController : ControllerBase
             Auctionhouse auctionhouse = new Auctionhouse();
             auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
 
-            Article article = new Article
+            Article addArticle = new Article
             {
                 ArticleID = ObjectId.GenerateNewId().ToString(),
                 Name = articleDTO.Name,
@@ -134,9 +125,9 @@ public class ArticleServiceController : ControllerBase
             };
 
 
-            await _articleCollection.InsertOneAsync(article);
+            await _articleCollection.InsertOneAsync(addArticle);
 
-            return Ok(article);
+            return Ok(addArticle);
         }
         catch (Exception ex)
         {
@@ -150,6 +141,43 @@ public class ArticleServiceController : ControllerBase
 
     //DELETE - Removes an article
 
+    //DELETE - Removes an article
+    [HttpDelete("deleteArticle/{id}")]
+    public async Task<IActionResult> DeleteArticle(string id)
+    {
+        try
+        {
+            _logger.LogInformation($"DELETE article kaldt med id: {id}");
+
+            Article deleteArticle = new Article();
+
+            deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+
+            if (DeleteArticle != null)
+            {
+                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+
+                await _articleCollection.DeleteOneAsync(filter);
+
+                return Ok(deleteArticle);
+            }
+            else
+            {
+                _logger.LogError($"Article not found");
+
+                throw new Exception("Article not found");
+            }
+
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved deleteArticle: {ex.Message}");
+
+            throw;
+        }
+
+    }
 
     //POST - Adds a new image
 
@@ -158,6 +186,27 @@ public class ArticleServiceController : ControllerBase
 
 
     //GET - Gets a specific article by ID
+    [HttpGet("getArticle/{id}")]
+    public async Task<IActionResult> GetAuctionHouse(string id)
+    {
+        _logger.LogInformation($"getArticle kaldt med ID= {id}");
+
+        try
+        {
+            Article getArticle = new Article();
+
+            getArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstOrDefaultAsync<Article>();
+
+            return Ok(getArticle);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+
+            throw;
+        }
+
+    }
 
 
     //GET - Lists information for a specifik article
