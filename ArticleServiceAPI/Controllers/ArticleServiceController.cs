@@ -161,8 +161,6 @@ public class ArticleServiceController : ControllerBase
             }
             else
             {
-                _logger.LogError($"Article not found");
-
                 throw new Exception("Article not found");
             }
 
@@ -208,7 +206,7 @@ public class ArticleServiceController : ControllerBase
 
 
     //GET - Return a list of all articles
-    [HttpGet("getAll/")]
+    [HttpGet("getAll")]
     public async Task<IActionResult> GetAllArticles()
     {
         _logger.LogInformation($"getAll endpoint kaldt");
@@ -231,7 +229,41 @@ public class ArticleServiceController : ControllerBase
     }
 
     //PUT - Updates estimated price of an article
+    [HttpPut("updatePrice/{id}/{price}")]
+    public async Task<IActionResult> UpdateEstimatedPrice(string id, double price)
+    {
+        _logger.LogInformation($"updatePrice endpoint kaldt");
 
+        try
+        {
+            Article updateArticle = new Article();
+
+            updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+
+            if (updateArticle != null)
+            {
+                updateArticle.EstimatedPrice = price;
+
+                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+
+                await _articleCollection.ReplaceOneAsync(filter, updateArticle);
+
+                return Ok($"Article with ID: {id} updated with estimated price: {price}");
+            }
+            else
+            {
+                throw new Exception("Article not found");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved updatePrice: {ex.Message}");
+
+            throw;
+        }
+
+    }
 
     //DELETE - Removes estimated price of an article
 
