@@ -151,20 +151,11 @@ public class ArticleServiceController : ControllerBase
 
             deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
 
-            if (DeleteArticle != null)
-            {
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
 
-                await _articleCollection.DeleteOneAsync(filter);
+            await _articleCollection.DeleteOneAsync(filter);
 
-                return Ok(deleteArticle);
-            }
-            else
-            {
-                throw new Exception("Article not found");
-            }
-
-
+            return Ok(deleteArticle);
         }
         catch (Exception ex)
         {
@@ -214,7 +205,7 @@ public class ArticleServiceController : ControllerBase
         try
         {
             List<Article> allArticles = new List<Article>();
-                
+
             allArticles = await _articleCollection.Find(_ => true).ToListAsync<Article>();
 
             return Ok(allArticles);
@@ -240,20 +231,13 @@ public class ArticleServiceController : ControllerBase
 
             updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
 
-            if (updateArticle != null)
-            {
-                updateArticle.EstimatedPrice = price;
+            updateArticle.EstimatedPrice = price;
 
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
 
-                await _articleCollection.ReplaceOneAsync(filter, updateArticle);
+            await _articleCollection.ReplaceOneAsync(filter, updateArticle);
 
-                return Ok($"Article with ID: {id} updated with estimated price: {price}");
-            }
-            else
-            {
-                throw new Exception("Article not found");
-            }
+            return Ok($"Article with ID: {id} updated with estimated price: {price}");
 
         }
         catch (Exception ex)
@@ -262,12 +246,42 @@ public class ArticleServiceController : ControllerBase
 
             throw;
         }
-
     }
 
-    //DELETE - Removes estimated price of an article
-
-
     //PUT - Marks an article as sold
+    [HttpPut("updateSold/{id}")]
+    public async Task<IActionResult> UpdateSold(string id)
+    {
+        _logger.LogInformation($"updatePrice endpoint kaldt");
 
+        try
+        {
+            Article updateArticle = new Article();
+
+            updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+
+            if (updateArticle.Sold == true)
+            {
+                updateArticle.Sold = false;
+            }
+            else
+            {
+                updateArticle.Sold = true;
+            }
+
+            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+
+            await _articleCollection.ReplaceOneAsync(filter, updateArticle);
+
+            return Ok($"Article with ID: {id} updated as sold: {updateArticle.Sold}");
+
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved updateSold: {ex.Message}");
+
+            throw;
+        }
+    }
 }
