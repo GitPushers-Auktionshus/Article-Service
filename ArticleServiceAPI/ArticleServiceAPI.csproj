@@ -20,8 +20,10 @@
     <None Remove="Model\" />
     <None Remove="MongoDB.Bson" />
     <None Remove="System.IO" />
+    <None Remove="Service\" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Model\" />
+    <Folder Include="Service\" />
   </ItemGroup>
 </Project>
