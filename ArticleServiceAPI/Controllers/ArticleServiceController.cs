@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Cryptography;
 using MongoDB.Bson.Serialization.Attributes;
+using System.IO.Pipelines;
+using System.IO;
+
 
 namespace ArticleServiceAPI.Controllers;
 
@@ -235,13 +238,10 @@ public class ArticleServiceController : ControllerBase
     }
 
     //DELETE - Removes an image
-
-
-    //GET - Gets a specific article by ID
-    [HttpGet("getArticle/{id}")]
-    public async Task<IActionResult> GetAuctionHouse(string id)
+    [HttpPut("removeImage/{id}/{image_id}")]
+    public async Task<IActionResult> RemoveImage(string id, string image_id)
     {
-        _logger.LogInformation($"getArticle kaldt med ID= {id}");
+        _logger.LogInformation($"RemoveImage kaldt med Art. ID = {id} og Image ID = {image_id}");
 
         try
         {
@@ -249,11 +249,27 @@ public class ArticleServiceController : ControllerBase
 
             getArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstOrDefaultAsync<Article>();
 
+            Image removedImage = new Image();
+
+            removedImage = getArticle.Images.Find(x => x.ImageID == image_id);
+
+            getArticle.Images.Remove(removedImage);
+
+            var filter = Builders<Article>.Filter.Eq("ArticleID", id); // Find the document to update
+
+            var update = Builders<Article>.Update.Set("Images", getArticle.Images);
+
+            await _articleCollection.UpdateOneAsync(filter, update);
+
+            string fullPath = _imagePath + Path.DirectorySeparatorChar + removedImage.FileName;
+
+            System.IO.File.Delete(fullPath);
+
             return Ok(getArticle);
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+            _logger.LogError($"Fejl ved removeImage: {ex.Message}");
 
             throw;
         }
@@ -292,15 +308,11 @@ public class ArticleServiceController : ControllerBase
 
         try
         {
-            Article updateArticle = new Article();
-
-            updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
-
-            updateArticle.EstimatedPrice = price;
-
             FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
 
-            await _articleCollection.ReplaceOneAsync(filter, updateArticle);
+            var update = Builders<Article>.Update.Set("EstimatedPrice", price);
+
+            await _articleCollection.UpdateOneAsync(filter, update);
 
             return Ok($"Article with ID: {id} updated with estimated price: {price}");
 
@@ -325,20 +337,27 @@ public class ArticleServiceController : ControllerBase
 
             updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
 
+            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+
+
             if (updateArticle.Sold == true)
             {
-                updateArticle.Sold = false;
+                var update = Builders<Article>.Update.Set("Sold", false);
+
+                await _articleCollection.UpdateOneAsync(filter, update);
+
+                return Ok($"Article with ID: {id} updated as sold: false");
+
             }
             else
             {
-                updateArticle.Sold = true;
+                var update = Builders<Article>.Update.Set("Sold", true);
+
+                await _articleCollection.UpdateOneAsync(filter, update);
+
+                return Ok($"Article with ID: {id} updated as sold: true");
+
             }
-
-            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
-
-            await _articleCollection.ReplaceOneAsync(filter, updateArticle);
-
-            return Ok($"Article with ID: {id} updated as sold: {updateArticle.Sold}");
 
         }
         catch (Exception ex)
