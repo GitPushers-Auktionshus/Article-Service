@@ -9,6 +9,8 @@ using System.Text;
 using ArticleServiceAPI.Model;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Cryptography;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace ArticleServiceAPI.Controllers;
 
@@ -29,6 +31,7 @@ public class ArticleServiceController : ControllerBase
     private readonly string _articleCollectionName;
     private readonly string _auctionHouseCollectionName;
 
+    private readonly string _imagePath;
 
     private readonly IMongoCollection<User> _userCollection;
     private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
@@ -65,6 +68,8 @@ public class ArticleServiceController : ControllerBase
         // Inventory database and collection
         _inventoryDatabase = "Inventory";
         _articleCollectionName = "article";
+
+        _imagePath = "/Users/jacobkaae/Downloads/";
 
         _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
         _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
@@ -167,7 +172,67 @@ public class ArticleServiceController : ControllerBase
     }
 
     //POST - Adds a new image
+    [HttpPost("addArticleImage/{id}"), DisableRequestSizeLimit]
+    public async Task<IActionResult> AddArticleImage(string id)
+    {
+        _logger.LogInformation("AddImage kaldt");
 
+        List<Uri> images = new List<Uri>();
+
+        try
+        {
+            foreach (var formFile in Request.Form.Files)
+            {
+                // Validate file type and size
+
+                if (formFile.ContentType != "image/jpeg" && formFile.ContentType != "image/png")
+                {
+                    return BadRequest($"Invalid file type for file {formFile.FileName}. Only JPEG and PNG files are allowed.");
+                }
+                if (formFile.Length > 1048576) // 1MB
+                {
+                    return BadRequest($"File {formFile.FileName} is too large. Maximum file size is 1MB.");
+                }
+                if (formFile.Length > 0)
+                {
+                    var fileName = "image-" + Guid.NewGuid().ToString() + ".jpg";
+                    var fullPath = _imagePath + Path.DirectorySeparatorChar + fileName;
+                    using (var stream = new FileStream(fullPath, FileMode.Create))
+                    {
+                        formFile.CopyTo(stream);
+                    }
+                    var imageURI = new Uri(fileName, UriKind.RelativeOrAbsolute);
+                    images.Add(imageURI);
+                }
+                else
+                {
+                    return BadRequest("Empty file submited.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message);
+            return StatusCode(500, $"Internal server error.");
+        }
+
+        var filter = Builders<Article>.Filter.Eq("ArticleID", id); // Find the document to update
+
+        var update = Builders<Article>.Update.Push("Images", new Image
+        {
+            ImageID = ObjectId.GenerateNewId().ToString(),
+            FileName = images[0].ToString(),
+            ImagePath = _imagePath,
+            Date = DateTime.UtcNow
+        });
+
+    // Insert the new element into the array
+
+    var result = _articleCollection.UpdateOne(filter, update);
+
+        Console.WriteLine($"{result.ModifiedCount} document(s) updated.");
+        return Ok(images);
+    }
 
     //DELETE - Removes an image
 
@@ -274,7 +339,6 @@ public class ArticleServiceController : ControllerBase
             await _articleCollection.ReplaceOneAsync(filter, updateArticle);
 
             return Ok($"Article with ID: {id} updated as sold: {updateArticle.Sold}");
-
 
         }
         catch (Exception ex)
