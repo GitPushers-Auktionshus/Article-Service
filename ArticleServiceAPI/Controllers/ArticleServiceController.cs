@@ -140,8 +140,6 @@ public class ArticleServiceController : ControllerBase
 
 
     //DELETE - Removes an article
-
-    //DELETE - Removes an article
     [HttpDelete("deleteArticle/{id}")]
     public async Task<IActionResult> DeleteArticle(string id)
     {
@@ -209,8 +207,28 @@ public class ArticleServiceController : ControllerBase
     }
 
 
-    //GET - Lists information for a specifik article
+    //GET - Return a list of all articles
+    [HttpGet("getAll/")]
+    public async Task<IActionResult> GetAllArticles()
+    {
+        _logger.LogInformation($"getAll endpoint kaldt");
 
+        try
+        {
+            List<Article> allArticles = new List<Article>();
+                
+            allArticles = await _articleCollection.Find(_ => true).ToListAsync<Article>();
+
+            return Ok(allArticles);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved getAllArticles: {ex.Message}");
+
+            throw;
+        }
+
+    }
 
     //PUT - Updates estimated price of an article
 
