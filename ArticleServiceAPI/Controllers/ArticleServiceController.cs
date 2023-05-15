@@ -78,42 +78,73 @@ public class ArticleServiceController : ControllerBase
         }
     }
 
+    [HttpGet("getAuctionhouse/{id}")]
+    public async Task<IActionResult> GetAuctionHouse(string id)
+    {
+        _logger.LogInformation($"Sendt ID= {id}");
+
+        try
+        {
+            Auctionhouse auctionhouse = new Auctionhouse();
+
+            auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == id).FirstOrDefaultAsync<Auctionhouse>();
+
+            return Ok(auctionhouse);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+
+            throw;
+        }
+
+    }
+
     //POST - Adds a new article
     [HttpPost("addArticle")]
     public async Task<IActionResult> AddArticle(ArticleDTO articleDTO)
     {
-        _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
-
-        User buyer = new User();
-        buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
-
-        User seller = new User();
-        seller = await _userCollection.Find(x => x.UserID == articleDTO.SellerID).FirstOrDefaultAsync<User>();
-
-        Auctionhouse auctionhouse = new Auctionhouse();
-        auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
-
-
-        Article article = new Article
+        try
         {
-            ArticleID = ObjectId.GenerateNewId().ToString(),
-            Name = articleDTO.Name,
-            NoReserve = articleDTO.NoReserve,
-            EstimatedPrice = articleDTO.EstimatedPrice,
-            Description = articleDTO.Description,
-            Images = new List<Image>(),
-            Category = articleDTO.Category,
-            Sold = articleDTO.Sold,
-            Auctionhouse = auctionhouse,
-            Seller = seller,
-            MinPrice = articleDTO.MinPrice,
-            Buyer = buyer
-        };
+            _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
+
+            User buyer = new User();
+            buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
+
+            User seller = new User();
+            seller = await _userCollection.Find(x => x.UserID == articleDTO.SellerID).FirstOrDefaultAsync<User>();
+
+            Auctionhouse auctionhouse = new Auctionhouse();
+            auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
+
+            Article article = new Article
+            {
+                ArticleID = ObjectId.GenerateNewId().ToString(),
+                Name = articleDTO.Name,
+                NoReserve = articleDTO.NoReserve,
+                EstimatedPrice = articleDTO.EstimatedPrice,
+                Description = articleDTO.Description,
+                Images = new List<Image>(),
+                Category = articleDTO.Category,
+                Sold = articleDTO.Sold,
+                Auctionhouse = auctionhouse,
+                Seller = seller,
+                MinPrice = articleDTO.MinPrice,
+                Buyer = buyer
+            };
 
 
-        await _articleCollection.InsertOneAsync(article);
+            await _articleCollection.InsertOneAsync(article);
 
-        return Ok(article);
+            return Ok(article);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+
+            throw;
+        }
+
     }
 
 
