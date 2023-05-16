@@ -1,5 +1,8 @@
+using ArticleServiceAPI.Service;
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSingleton<IArticleRepository>(new MongoRepository());
 // Add services to the container.
 
 builder.Services.AddControllers();

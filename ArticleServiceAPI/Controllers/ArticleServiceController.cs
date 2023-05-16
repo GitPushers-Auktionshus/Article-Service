@@ -13,7 +13,7 @@ using System.Security.Cryptography;
 using MongoDB.Bson.Serialization.Attributes;
 using System.IO.Pipelines;
 using System.IO;
-
+using ArticleServiceAPI.Service;
 
 namespace ArticleServiceAPI.Controllers;
 
@@ -41,10 +41,13 @@ public class ArticleServiceController : ControllerBase
     private readonly IMongoCollection<Article> _articleCollection;
     private readonly IConfiguration _config;
 
-    public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config)
+    private readonly IArticleRepository _service;
+
+    public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config, IArticleRepository service)
     {
         _logger = logger;
         _config = config;
+        _service = service;
 
         //_secret = config["Secret"] ?? "Secret missing";
         //_issuer = config["Issuer"] ?? "Issue'er missing";
@@ -58,8 +61,6 @@ public class ArticleServiceController : ControllerBase
         //// Inventory database and collection
         //_inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
         //_articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
-
-
 
         _connectionURI = "mongodb://admin:1234@localhost:27018/";
 
@@ -101,48 +102,9 @@ public class ArticleServiceController : ControllerBase
 
     //POST - Adds a new article
     [HttpPost("addArticle")]
-    public async Task<IActionResult> AddArticle(ArticleDTO articleDTO)
+    public async Task<Article> AddArticle(ArticleDTO articleDTO)
     {
-        try
-        {
-            _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
-
-            User buyer = new User();
-            buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
-
-            User seller = new User();
-            seller = await _userCollection.Find(x => x.UserID == articleDTO.SellerID).FirstOrDefaultAsync<User>();
-
-            Auctionhouse auctionhouse = new Auctionhouse();
-            auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
-
-            Article addArticle = new Article
-            {
-                ArticleID = ObjectId.GenerateNewId().ToString(),
-                Name = articleDTO.Name,
-                NoReserve = articleDTO.NoReserve,
-                EstimatedPrice = articleDTO.EstimatedPrice,
-                Description = articleDTO.Description,
-                Images = new List<Image>(),
-                Category = articleDTO.Category,
-                Sold = articleDTO.Sold,
-                Auctionhouse = auctionhouse,
-                Seller = seller,
-                MinPrice = articleDTO.MinPrice,
-                Buyer = buyer
-            };
-
-
-            await _articleCollection.InsertOneAsync(addArticle);
-
-            return Ok(addArticle);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
-
-            throw;
-        }
+        return await _service.AddNewArticle(articleDTO);
 
     }
 
@@ -229,9 +191,9 @@ public class ArticleServiceController : ControllerBase
             Date = DateTime.UtcNow
         });
 
-    // Insert the new element into the array
+        // Insert the new element into the array
 
-    var result = _articleCollection.UpdateOne(filter, update);
+        var result = _articleCollection.UpdateOne(filter, update);
 
         Console.WriteLine($"{result.ModifiedCount} document(s) updated.");
         return Ok(images);
@@ -279,7 +241,7 @@ public class ArticleServiceController : ControllerBase
 
     //GET - Return a list of all articles
     [HttpGet("getAll")]
-    public async Task<IActionResult> GetAllArticles()
+    public async Task<IActionResult> GetAll()
     {
         _logger.LogInformation($"getAll endpoint kaldt");
 
@@ -302,7 +264,7 @@ public class ArticleServiceController : ControllerBase
 
     //PUT - Updates estimated price of an article
     [HttpPut("updatePrice/{id}/{price}")]
-    public async Task<IActionResult> UpdateEstimatedPrice(string id, double price)
+    public async Task<IActionResult> UpdatePrice(string id, double price)
     {
         _logger.LogInformation($"updatePrice endpoint kaldt");
 
