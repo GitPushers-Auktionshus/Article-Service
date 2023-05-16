@@ -9,6 +9,11 @@ using System.Text;
 using ArticleServiceAPI.Model;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Cryptography;
+using MongoDB.Bson.Serialization.Attributes;
+using System.IO.Pipelines;
+using System.IO;
+using ArticleServiceAPI.Service;
 
 namespace ArticleServiceAPI.Controllers;
 
@@ -18,206 +23,88 @@ public class ArticleServiceController : ControllerBase
 {
     private readonly ILogger<ArticleServiceController> _logger;
 
-    private readonly string _secret;
-    private readonly string _issuer;
-    private readonly string _connectionURI;
-
-    private readonly string _usersDatabase;
-    private readonly string _inventoryDatabase;
-
-    private readonly string _userCollectionName;
-    private readonly string _articleCollectionName;
-    private readonly string _auctionHouseCollectionName;
-
-
-    private readonly IMongoCollection<User> _userCollection;
-    private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
-    private readonly IMongoCollection<Article> _articleCollection;
     private readonly IConfiguration _config;
 
-    public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config)
+    private readonly IArticleRepository _service;
+
+    public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config, IArticleRepository service)
     {
         _logger = logger;
         _config = config;
-
-        //_secret = config["Secret"] ?? "Secret missing";
-        //_issuer = config["Issuer"] ?? "Issue'er missing";
-        //_connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
-
-        //// User database and collections
-        //_usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
-        //_userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
-        //_auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
-
-        //// Inventory database and collection
-        //_inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
-        //_articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
-
-
-
-        _connectionURI = "mongodb://admin:1234@localhost:27018/";
-
-        // User database and collections
-        _usersDatabase = "Users";
-        _userCollectionName = "user";
-        _auctionHouseCollectionName = "auctionhouse";
-
-        // Inventory database and collection
-        _inventoryDatabase = "Inventory";
-        _articleCollectionName = "article";
-
-        _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
-        _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
-
-        try
-        {
-            // Client
-            var mongoClient = new MongoClient(_connectionURI);
-
-            // Databases
-            var userDatabase = mongoClient.GetDatabase(_usersDatabase);
-            var inventoryDatabase = mongoClient.GetDatabase(_inventoryDatabase);
-
-            // Collections
-            _userCollection = userDatabase.GetCollection<User>(_userCollectionName);
-            _articleCollection = inventoryDatabase.GetCollection<Article>(_articleCollectionName);
-            _auctionHouseCollection = userDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved oprettelse af forbindelse: {ex.Message}");
-            throw;
-        }
+        _service = service;
     }
 
     //POST - Adds a new article
     [HttpPost("addArticle")]
-    public async Task<IActionResult> AddArticle(ArticleDTO articleDTO)
+    public async Task<Article> AddArticle(ArticleDTO articleDTO)
     {
-        try
-        {
-            _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
-
-            User buyer = new User();
-            buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
-
-            User seller = new User();
-            seller = await _userCollection.Find(x => x.UserID == articleDTO.SellerID).FirstOrDefaultAsync<User>();
-
-            Auctionhouse auctionhouse = new Auctionhouse();
-            auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
-
-            Article addArticle = new Article
-            {
-                ArticleID = ObjectId.GenerateNewId().ToString(),
-                Name = articleDTO.Name,
-                NoReserve = articleDTO.NoReserve,
-                EstimatedPrice = articleDTO.EstimatedPrice,
-                Description = articleDTO.Description,
-                Images = new List<Image>(),
-                Category = articleDTO.Category,
-                Sold = articleDTO.Sold,
-                Auctionhouse = auctionhouse,
-                Seller = seller,
-                MinPrice = articleDTO.MinPrice,
-                Buyer = buyer
-            };
-
-
-            await _articleCollection.InsertOneAsync(addArticle);
-
-            return Ok(addArticle);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
-
-            throw;
-        }
-
+        return await _service.AddNewArticle(articleDTO);
     }
 
-
-    //DELETE - Removes an article
 
     //DELETE - Removes an article
     [HttpDelete("deleteArticle/{id}")]
-    public async Task<IActionResult> DeleteArticle(string id)
+    public async Task<Article> DeleteArticle(string id)
     {
-        try
-        {
-            _logger.LogInformation($"DELETE article kaldt med id: {id}");
+        return await _service.DeleteArticleByID(id);
+    }
 
-            Article deleteArticle = new Article();
+    //GET - Gets an article by ID
+    [HttpGet("getArticle/{id}")]
+    public async Task<Article> GetArticle(string id)
+    {
+        return await _service.GetArticleByID(id);
+    }
 
-            deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
-
-            if (DeleteArticle != null)
-            {
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
-
-                await _articleCollection.DeleteOneAsync(filter);
-
-                return Ok(deleteArticle);
-            }
-            else
-            {
-                _logger.LogError($"Article not found");
-
-                throw new Exception("Article not found");
-            }
-
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved deleteArticle: {ex.Message}");
-
-            throw;
-        }
-
+    //GET - Return a list of all articles
+    [HttpGet("getAll")]
+    public async Task<List<Article>> GetAll()
+    {
+        return await _service.GetAllArticles();
     }
 
     //POST - Adds a new image
-
-
-    //DELETE - Removes an image
-
-
-    //GET - Gets a specific article by ID
-    [HttpGet("getArticle/{id}")]
-    public async Task<IActionResult> GetAuctionHouse(string id)
+    [HttpPut("addArticleImage/{id}"), DisableRequestSizeLimit]
+    public List<Uri> AddArticleImage(string id)
     {
-        _logger.LogInformation($"getArticle kaldt med ID= {id}");
+        List<Uri> images = new List<Uri>();
 
         try
         {
-            Article getArticle = new Article();
-
-            getArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstOrDefaultAsync<Article>();
-
-            return Ok(getArticle);
+            foreach (var formFile in Request.Form.Files)
+            {
+                images = _service.ImageHandler(formFile);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+            _logger.LogError($"Fejl ved AddArticleImage i controller: {ex.Message}");
 
             throw;
         }
 
+        return _service.AddImageToArticle(images, id);
+
     }
 
-
-    //GET - Lists information for a specifik article
-
+    //DELETE - Removes an image
+    [HttpPut("removeImage/{id}/{image_id}")]
+    public async Task<Article> RemoveImage(string id, string image_id)
+    {
+        return await _service.RemoveImageFromArticle(id, image_id);
+    }
 
     //PUT - Updates estimated price of an article
-
-
-    //DELETE - Removes estimated price of an article
-
+    [HttpPut("updatePrice/{id}/{price}")]
+    public async Task<string> UpdatePrice(string id, double price)
+    {
+        return await _service.UpdateEstimatedPrice(id, price);
+    }
 
     //PUT - Marks an article as sold
-
+    [HttpPut("updateSold/{id}")]
+    public async Task<string> UpdateSold(string id)
+    {
+        return await _service.UpdateSoldStatus(id);
+    }
 }

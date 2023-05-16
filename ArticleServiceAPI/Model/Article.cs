@@ -11,7 +11,7 @@ namespace ArticleServiceAPI.Model
         public string ArticleID { get; set; }
         public string? Name { get; set; }
         public bool NoReserve { get; set; }
-        public float EstimatedPrice { get; set; }
+        public double EstimatedPrice { get; set; }
         public string? Description { get; set; }
         public List<Image> Images { get; set; }
         public string? Category { get; set; }
