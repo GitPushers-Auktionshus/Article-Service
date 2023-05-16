@@ -23,22 +23,6 @@ public class ArticleServiceController : ControllerBase
 {
     private readonly ILogger<ArticleServiceController> _logger;
 
-    private readonly string _secret;
-    private readonly string _issuer;
-    private readonly string _connectionURI;
-
-    private readonly string _usersDatabase;
-    private readonly string _inventoryDatabase;
-
-    private readonly string _userCollectionName;
-    private readonly string _articleCollectionName;
-    private readonly string _auctionHouseCollectionName;
-
-    private readonly string _imagePath;
-
-    private readonly IMongoCollection<User> _userCollection;
-    private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
-    private readonly IMongoCollection<Article> _articleCollection;
     private readonly IConfiguration _config;
 
     private readonly IArticleRepository _service;
@@ -48,56 +32,6 @@ public class ArticleServiceController : ControllerBase
         _logger = logger;
         _config = config;
         _service = service;
-
-        //_secret = config["Secret"] ?? "Secret missing";
-        //_issuer = config["Issuer"] ?? "Issue'er missing";
-        //_connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
-
-        //// User database and collections
-        //_usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
-        //_userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
-        //_auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
-
-        //// Inventory database and collection
-        //_inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
-        //_articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
-
-        _connectionURI = "mongodb://admin:1234@localhost:27018/";
-
-        // User database and collections
-        _usersDatabase = "Users";
-        _userCollectionName = "user";
-        _auctionHouseCollectionName = "auctionhouse";
-
-        // Inventory database and collection
-        _inventoryDatabase = "Inventory";
-        _articleCollectionName = "article";
-
-        _imagePath = "/Users/jacobkaae/Downloads/";
-
-        _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
-        _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
-
-        try
-        {
-            // Client
-            var mongoClient = new MongoClient(_connectionURI);
-
-            // Databases
-            var userDatabase = mongoClient.GetDatabase(_usersDatabase);
-            var inventoryDatabase = mongoClient.GetDatabase(_inventoryDatabase);
-
-            // Collections
-            _userCollection = userDatabase.GetCollection<User>(_userCollectionName);
-            _articleCollection = inventoryDatabase.GetCollection<Article>(_articleCollectionName);
-            _auctionHouseCollection = userDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved oprettelse af forbindelse: {ex.Message}");
-            throw;
-        }
     }
 
     //POST - Adds a new article
@@ -105,228 +39,72 @@ public class ArticleServiceController : ControllerBase
     public async Task<Article> AddArticle(ArticleDTO articleDTO)
     {
         return await _service.AddNewArticle(articleDTO);
-
     }
 
 
     //DELETE - Removes an article
     [HttpDelete("deleteArticle/{id}")]
-    public async Task<IActionResult> DeleteArticle(string id)
+    public async Task<Article> DeleteArticle(string id)
     {
-        try
-        {
-            _logger.LogInformation($"DELETE article kaldt med id: {id}");
+        return await _service.DeleteArticleByID(id);
+    }
 
-            Article deleteArticle = new Article();
+    //GET - Gets an article by ID
+    [HttpGet("getArticle/{id}")]
+    public async Task<Article> GetArticle(string id)
+    {
+        return await _service.GetArticleByID(id);
+    }
 
-            deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
-
-            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
-
-            await _articleCollection.DeleteOneAsync(filter);
-
-            return Ok(deleteArticle);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved deleteArticle: {ex.Message}");
-
-            throw;
-        }
-
+    //GET - Return a list of all articles
+    [HttpGet("getAll")]
+    public async Task<List<Article>> GetAll()
+    {
+        return await _service.GetAllArticles();
     }
 
     //POST - Adds a new image
-    [HttpPost("addArticleImage/{id}"), DisableRequestSizeLimit]
-    public async Task<IActionResult> AddArticleImage(string id)
+    [HttpPut("addArticleImage/{id}"), DisableRequestSizeLimit]
+    public List<Uri> AddArticleImage(string id)
     {
-        _logger.LogInformation("AddImage kaldt");
-
         List<Uri> images = new List<Uri>();
 
         try
         {
             foreach (var formFile in Request.Form.Files)
             {
-                // Validate file type and size
-
-                if (formFile.ContentType != "image/jpeg" && formFile.ContentType != "image/png")
-                {
-                    return BadRequest($"Invalid file type for file {formFile.FileName}. Only JPEG and PNG files are allowed.");
-                }
-                if (formFile.Length > 1048576) // 1MB
-                {
-                    return BadRequest($"File {formFile.FileName} is too large. Maximum file size is 1MB.");
-                }
-                if (formFile.Length > 0)
-                {
-                    var fileName = "image-" + Guid.NewGuid().ToString() + ".jpg";
-                    var fullPath = _imagePath + Path.DirectorySeparatorChar + fileName;
-                    using (var stream = new FileStream(fullPath, FileMode.Create))
-                    {
-                        formFile.CopyTo(stream);
-                    }
-                    var imageURI = new Uri(fileName, UriKind.RelativeOrAbsolute);
-                    images.Add(imageURI);
-                }
-                else
-                {
-                    return BadRequest("Empty file submited.");
-                }
+                images = _service.ImageHandler(formFile);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex.Message);
-            return StatusCode(500, $"Internal server error.");
+            _logger.LogError($"Fejl ved AddArticleImage i controller: {ex.Message}");
+
+            throw;
         }
 
-        var filter = Builders<Article>.Filter.Eq("ArticleID", id); // Find the document to update
+        return _service.AddImageToArticle(images, id);
 
-        var update = Builders<Article>.Update.Push("Images", new Image
-        {
-            ImageID = ObjectId.GenerateNewId().ToString(),
-            FileName = images[0].ToString(),
-            ImagePath = _imagePath,
-            Date = DateTime.UtcNow
-        });
-
-        // Insert the new element into the array
-
-        var result = _articleCollection.UpdateOne(filter, update);
-
-        Console.WriteLine($"{result.ModifiedCount} document(s) updated.");
-        return Ok(images);
     }
 
     //DELETE - Removes an image
     [HttpPut("removeImage/{id}/{image_id}")]
-    public async Task<IActionResult> RemoveImage(string id, string image_id)
+    public async Task<Article> RemoveImage(string id, string image_id)
     {
-        _logger.LogInformation($"RemoveImage kaldt med Art. ID = {id} og Image ID = {image_id}");
-
-        try
-        {
-            Article getArticle = new Article();
-
-            getArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstOrDefaultAsync<Article>();
-
-            Image removedImage = new Image();
-
-            removedImage = getArticle.Images.Find(x => x.ImageID == image_id);
-
-            getArticle.Images.Remove(removedImage);
-
-            var filter = Builders<Article>.Filter.Eq("ArticleID", id); // Find the document to update
-
-            var update = Builders<Article>.Update.Set("Images", getArticle.Images);
-
-            await _articleCollection.UpdateOneAsync(filter, update);
-
-            string fullPath = _imagePath + Path.DirectorySeparatorChar + removedImage.FileName;
-
-            System.IO.File.Delete(fullPath);
-
-            return Ok(getArticle);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved removeImage: {ex.Message}");
-
-            throw;
-        }
-
-    }
-
-
-    //GET - Return a list of all articles
-    [HttpGet("getAll")]
-    public async Task<IActionResult> GetAll()
-    {
-        _logger.LogInformation($"getAll endpoint kaldt");
-
-        try
-        {
-            List<Article> allArticles = new List<Article>();
-
-            allArticles = await _articleCollection.Find(_ => true).ToListAsync<Article>();
-
-            return Ok(allArticles);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved getAllArticles: {ex.Message}");
-
-            throw;
-        }
-
+        return await _service.RemoveImageFromArticle(id, image_id);
     }
 
     //PUT - Updates estimated price of an article
     [HttpPut("updatePrice/{id}/{price}")]
-    public async Task<IActionResult> UpdatePrice(string id, double price)
+    public async Task<string> UpdatePrice(string id, double price)
     {
-        _logger.LogInformation($"updatePrice endpoint kaldt");
-
-        try
-        {
-            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
-
-            var update = Builders<Article>.Update.Set("EstimatedPrice", price);
-
-            await _articleCollection.UpdateOneAsync(filter, update);
-
-            return Ok($"Article with ID: {id} updated with estimated price: {price}");
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved updatePrice: {ex.Message}");
-
-            throw;
-        }
+        return await _service.UpdateEstimatedPrice(id, price);
     }
 
     //PUT - Marks an article as sold
     [HttpPut("updateSold/{id}")]
-    public async Task<IActionResult> UpdateSold(string id)
+    public async Task<string> UpdateSold(string id)
     {
-        _logger.LogInformation($"updatePrice endpoint kaldt");
-
-        try
-        {
-            Article updateArticle = new Article();
-
-            updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
-
-            FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
-
-
-            if (updateArticle.Sold == true)
-            {
-                var update = Builders<Article>.Update.Set("Sold", false);
-
-                await _articleCollection.UpdateOneAsync(filter, update);
-
-                return Ok($"Article with ID: {id} updated as sold: false");
-
-            }
-            else
-            {
-                var update = Builders<Article>.Update.Set("Sold", true);
-
-                await _articleCollection.UpdateOneAsync(filter, update);
-
-                return Ok($"Article with ID: {id} updated as sold: true");
-
-            }
-
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Fejl ved updateSold: {ex.Message}");
-
-            throw;
-        }
+        return await _service.UpdateSoldStatus(id);
     }
 }

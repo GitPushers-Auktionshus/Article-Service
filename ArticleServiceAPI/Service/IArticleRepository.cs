@@ -8,19 +8,21 @@ namespace ArticleServiceAPI.Service
 	{
 		public Task<Article> AddNewArticle(ArticleDTO articleDTO);
 
-        public Task<IActionResult> DeleteArticleByID(Object x);
+        public Task<Article> DeleteArticleByID(string id);
 
-        public Task<IActionResult> AddImageToArticle(Object x);
+        public List<Uri> ImageHandler(IFormFile formFile);
 
-        public Task<IActionResult> RemoveImageFromArticle(Object x);
+        public List<Uri> AddImageToArticle(List<Uri> images, string id);
 
-        public Task<IActionResult> GetAllArticles(Object x);
+        public Task<Article> RemoveImageFromArticle(string id, string image_id);
+
+        public Task<List<Article>> GetAllArticles();
 
         public Task<Article> GetArticleByID(string id);
 
-        public Task<IActionResult> UpdateEstimatedPrice(Object x);
+        public Task<string> UpdateEstimatedPrice(string id, double price);
 
-        public Task<IActionResult> UpdateSoldStatus(Object x);
+        public Task<string> UpdateSoldStatus(string id);
     }
 
 }
