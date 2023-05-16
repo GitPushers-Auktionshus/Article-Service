@@ -10,7 +10,7 @@ using Image = ArticleServiceAPI.Model.Image;
 namespace ArticleServiceAPI.Service
 {
     // Inherits from our interface - can be changed to eg. a SQL database
-    public class MongoRepository : IArticleRepository
+    public class MongoDBService : IArticleRepository
     {
         private readonly ILogger<ArticleServiceController> _logger;
         private readonly IConfiguration _config;
@@ -32,7 +32,7 @@ namespace ArticleServiceAPI.Service
         private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
         private readonly IMongoCollection<Article> _articleCollection;
 
-        public MongoRepository(ILogger<ArticleServiceController> logger, IConfiguration config)
+        public MongoDBService(ILogger<ArticleServiceController> logger, IConfiguration config)
         {
             _logger = logger;
             _config = config;
