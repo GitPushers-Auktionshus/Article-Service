@@ -1,16 +1,18 @@
 ﻿using System;
 using ArticleServiceAPI.Controllers;
 using ArticleServiceAPI.Model;
+using AuthServiceAPI.Model;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using static System.Net.Mime.MediaTypeNames;
 using Image = ArticleServiceAPI.Model.Image;
 
+
 namespace ArticleServiceAPI.Service
 {
     // Inherits from our interface - can be changed to eg. a SQL database
-    public class MongoRepository : IArticleRepository
+    public class MongoDBService : IArticleRepository
     {
         private readonly ILogger<ArticleServiceController> _logger;
         private readonly IConfiguration _config;
@@ -32,27 +34,31 @@ namespace ArticleServiceAPI.Service
         private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
         private readonly IMongoCollection<Article> _articleCollection;
 
-        public MongoRepository(ILogger<ArticleServiceController> logger, IConfiguration config)
+        public MongoDBService(ILogger<ArticleServiceController> logger, IConfiguration config, EnviromentVariables vaultSecrets)
         {
             _logger = logger;
             _config = config;
 
             try
             {
-                // Retrieves enviroment variables from program.cs, from injected EnviromentVariables class 
-                //_secret = config["Secret"] ?? "Secret missing";
-                //_issuer = config["Issuer"] ?? "Issue'er missing";
-                //_connectionURI = config["ConnectionURI"] ?? "ConnectionURI missing";
+                // Retrieves enviroment variables from program.cs, from injected EnviromentVariables class
+                _connectionURI = vaultSecrets.dictionary["ConnectionURI"];
 
-                //// Retrieves User database and collections
-                //_usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
-                //_userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
-                //_auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
+                // Retrieves User database and collections
+                _usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
+                _userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
+                _auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
 
-                //// Retrieves Inventory database and collection
-                //_inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
-                //_articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
+                // Retrieves Inventory database and collection
+                _inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
+                _articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
 
+                // Retrieve Image Path to store images
+                _imagePath = config["ImagePath"] ?? "ImagePath missing";
+
+                _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
+                _logger.LogInformation($"ImagePath: {_imagePath}");
+                _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
             }
             catch (Exception ex)
             {
@@ -60,22 +66,6 @@ namespace ArticleServiceAPI.Service
 
                 throw;
             }
-
-            _connectionURI = "mongodb://admin:1234@localhost:27018/";
-
-            // User database and collections
-            _usersDatabase = "Users";
-            _userCollectionName = "user";
-            _auctionHouseCollectionName = "auctionhouse";
-
-            // Inventory database and collection
-            _inventoryDatabase = "Inventory";
-            _articleCollectionName = "article";
-
-            _imagePath = "/Users/jacobkaae/Downloads/";
-
-            _logger.LogInformation($"ArticleService secrets: ConnectionURI: {_connectionURI}");
-            _logger.LogInformation($"ArticleService Database and Collections: Userdatabase: {_usersDatabase}, Inventorydatabase: {_inventoryDatabase}, UserCollection: {_userCollectionName}, AuctionHouseCollection: {_auctionHouseCollectionName}, ArticleCollection: {_articleCollectionName}");
 
             try
             {
@@ -241,6 +231,19 @@ namespace ArticleServiceAPI.Service
                 // Finds the article to be deleted using an ID
                 deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
 
+                if (deleteArticle.Images != null)
+                {
+                    // Deletes all images from the article in the volume
+                    foreach (var image in deleteArticle.Images)
+                    {
+                        string fullPath = _imagePath + Path.DirectorySeparatorChar + image.FileName;
+
+                        // Deletes the image file from our volume
+                        System.IO.File.Delete(fullPath);
+                    }
+                }
+
+                // Creates filter for a specific article using an ID
                 FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
 
                 // Deletes the article from article collection

@@ -14,13 +14,32 @@
     <PackageReference Include="MongoDB.Driver" Version="2.19.1" />
     <PackageReference Include="MongoDB.Bson" Version="2.19.1" />
     <PackageReference Include="System.IO" Version="4.3.0" />
+    <PackageReference Include="NLog" Version="5.1.4" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
+    <PackageReference Include="NLog.Targets.Loki" Version="1.4.6" />
+    <PackageReference Include="VaultSharp" Version="1.13.0.1" />
+    <PackageReference Include="NLog.Web" Version="5.2.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.5" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.30.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.30.1" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Model\" />
     <None Remove="MongoDB.Bson" />
+    <None Remove="NLog" />
+    <None Remove="NLog.Web.AspNetCore" />
+    <None Include="NLog.config">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Remove="NLog.Targets.Loki" />
+    <None Remove="VaultSharp" />
     <None Remove="System.IO" />
     <None Remove="Service\" />
+    <None Remove="NLog.Web" />
+    <None Remove="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <None Remove="Microsoft.IdentityModel.Tokens" />
+    <None Remove="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Model\" />
