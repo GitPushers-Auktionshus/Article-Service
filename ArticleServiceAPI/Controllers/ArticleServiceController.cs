@@ -27,6 +27,7 @@ public class ArticleServiceController : ControllerBase
 
     private readonly IArticleRepository _service;
 
+
     public ArticleServiceController(ILogger<ArticleServiceController> logger, IConfiguration config, IArticleRepository service)
     {
         _logger = logger;
@@ -35,6 +36,7 @@ public class ArticleServiceController : ControllerBase
     }
 
     //POST - Adds a new article
+    [Authorize]
     [HttpPost("addArticle")]
     public async Task<Article> AddArticle(ArticleDTO articleDTO)
     {
@@ -43,6 +45,7 @@ public class ArticleServiceController : ControllerBase
 
 
     //DELETE - Removes an article
+    [Authorize]
     [HttpDelete("deleteArticle/{id}")]
     public async Task<Article> DeleteArticle(string id)
     {
@@ -64,6 +67,7 @@ public class ArticleServiceController : ControllerBase
     }
 
     //POST - Adds a new image
+    [Authorize]
     [HttpPut("addArticleImage/{id}"), DisableRequestSizeLimit]
     public List<Uri> AddArticleImage(string id)
     {
@@ -88,6 +92,7 @@ public class ArticleServiceController : ControllerBase
     }
 
     //DELETE - Removes an image
+    [Authorize]
     [HttpPut("removeImage/{id}/{image_id}")]
     public async Task<Article> RemoveImage(string id, string image_id)
     {
@@ -95,6 +100,7 @@ public class ArticleServiceController : ControllerBase
     }
 
     //PUT - Updates estimated price of an article
+    [Authorize]
     [HttpPut("updatePrice/{id}/{price}")]
     public async Task<string> UpdatePrice(string id, double price)
     {
@@ -102,6 +108,7 @@ public class ArticleServiceController : ControllerBase
     }
 
     //PUT - Marks an article as sold
+    [Authorize]
     [HttpPut("updateSold/{id}")]
     public async Task<string> UpdateSold(string id)
     {
