@@ -34,24 +34,24 @@ namespace ArticleServiceAPI.Service
         private readonly IMongoCollection<Auctionhouse> _auctionHouseCollection;
         private readonly IMongoCollection<Article> _articleCollection;
 
-        public MongoDBService(ILogger<ArticleServiceController> logger, IConfiguration config, EnviromentVariables vaultSecrets)
+        public MongoDBService(ILogger<ArticleServiceController> logger, IConfiguration config, EnvVariables vaultSecrets)
         {
             _logger = logger;
             _config = config;
 
             try
             {
-                // Retrieves enviroment variables from program.cs, from injected EnviromentVariables class
+                // Retrieves enviroment variables from program.cs, from injected EnvVariables class
                 _connectionURI = vaultSecrets.dictionary["ConnectionURI"];
 
                 // Retrieves User database and collections
-                _usersDatabase = config["UsersDatabase"] ?? "Userdatabase missing";
-                _userCollectionName = config["UserCollection"] ?? "Usercollection name missing";
-                _auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "Auctionhousecollection name missing";
+                _usersDatabase = config["UsersDatabase"] ?? "UsersDatabase missing";
+                _userCollectionName = config["UserCollection"] ?? "UserCollection name missing";
+                _auctionHouseCollectionName = config["AuctionHouseCollection"] ?? "AuctionHouseCollection name missing";
 
                 // Retrieves Inventory database and collection
-                _inventoryDatabase = config["InventoryDatabase"] ?? "Invetorydatabase missing";
-                _articleCollectionName = config["ArticleCollection"] ?? "Articlecollection name missing";
+                _inventoryDatabase = config["InventoryDatabase"] ?? "InvetoryDatabase missing";
+                _articleCollectionName = config["ArticleCollection"] ?? "ArticleCollection name missing";
 
                 // Retrieve Image Path to store images
                 _imagePath = config["ImagePath"] ?? "ImagePath missing";
@@ -71,20 +71,32 @@ namespace ArticleServiceAPI.Service
             {
                 // Sets MongoDB client
                 var mongoClient = new MongoClient(_connectionURI);
+                _logger.LogInformation($"[*] CONNECTION_URI: {_connectionURI}");
+
 
                 // Sets MongoDB Database
                 var userDatabase = mongoClient.GetDatabase(_usersDatabase);
+                _logger.LogInformation($"[*] DATABASE: {_usersDatabase}");
+
                 var inventoryDatabase = mongoClient.GetDatabase(_inventoryDatabase);
+                _logger.LogInformation($"[*] DATABASE: {_inventoryDatabase}");
+
 
                 // Sets MongoDB Collection
                 _userCollection = userDatabase.GetCollection<User>(_userCollectionName);
+                _logger.LogInformation($"[*] COLLECTION: {_userCollectionName}");
+
                 _articleCollection = inventoryDatabase.GetCollection<Article>(_articleCollectionName);
+                _logger.LogInformation($"[*] COLLECTION: {_articleCollectionName}");
+
                 _auctionHouseCollection = userDatabase.GetCollection<Auctionhouse>(_auctionHouseCollectionName);
+                _logger.LogInformation($"[*] COLLECTION: {_auctionHouseCollectionName}");
+
 
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved oprettelse af forbindelse: {ex.Message}");
+                _logger.LogError($"Error trying to connect to database: {ex.Message}");
 
                 throw;
             }
@@ -92,14 +104,14 @@ namespace ArticleServiceAPI.Service
         }
 
         // Adds an image to a specified article
-        public List<Uri> AddImageToArticle(List<Uri> images, string id)
+        public List<Uri> AddImageToArticle(List<Uri> images, string articleId)
         {
             try
             {
-                _logger.LogInformation("AddImageToArticle kaldt");
+                _logger.LogInformation("[*] AddImageToArticle(List<Uri> images, string articleId) called: Adding image to the article");
 
                 // Find the document to update
-                var filter = Builders<Article>.Filter.Eq("ArticleID", id);
+                var filter = Builders<Article>.Filter.Eq("ArticleID", articleId);
 
                 // Pushes the image to the article
                 var update = Builders<Article>.Update.Push("Images", new Image
@@ -119,7 +131,7 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved AddImageToArticle: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
@@ -130,7 +142,7 @@ namespace ArticleServiceAPI.Service
         {
             try
             {
-                _logger.LogInformation("ImageHandler kaldt");
+                _logger.LogInformation("[*] ImageHandler(<IFormFile formfile) called: Creating an URI for the image and adding it to the list");
 
                 List<Uri> images = new List<Uri>();
 
@@ -164,7 +176,7 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved ImageHandler: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
@@ -176,10 +188,9 @@ namespace ArticleServiceAPI.Service
         {
             try
             {
-                _logger.LogInformation($"POST: addArticle kaldt, Name: {articleDTO.Name}, NoReserve: {articleDTO.NoReserve}, EstimatedPrice: {articleDTO.EstimatedPrice}, Description: {articleDTO.Description}, Category: {articleDTO.Category}, Sold: {articleDTO.Sold}, AuctionhouseID: {articleDTO.AuctionhouseID}, SellerID: {articleDTO.SellerID}, MinPrice: {articleDTO.MinPrice}, BuyerID: {articleDTO.BuyerID}");
-
+                _logger.LogInformation($"[*] AddNewArticle(ArticleDTO articleDTO) called: Adding a new Article document to the database\nName: {articleDTO.Name}\nNoReserve: {articleDTO.NoReserve}\nEstimatedPrice: {articleDTO.EstimatedPrice}\nDescription: {articleDTO.Description}\nCategory: {articleDTO.Category}\nSold: {articleDTO.Sold}\nAuctionhouseID: {articleDTO.AuctionhouseID}\nSellerID: {articleDTO.SellerID}\nMinPrice: {articleDTO.MinPrice}\nBuyerID: {articleDTO.BuyerID}");
+                
                 // Finds the seller, buyer and auctionhouse in our database using ID's from the articleDTO
-
                 User buyer = new User();
                 buyer = await _userCollection.Find(x => x.UserID == articleDTO.BuyerID).FirstOrDefaultAsync<User>();
 
@@ -213,23 +224,23 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved addArticle: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
         }
 
         // Deletes a specific article from the database using an ID
-        public async Task<Article> DeleteArticleByID(string id)
+        public async Task<Article> DeleteArticleByID(string articleId)
         {
             try
             {
-                _logger.LogInformation($"DELETE article kaldt med id: {id}");
+                _logger.LogInformation($"[*] DeleteArticleByID(string articleId) called: Deleting article with articleId {articleId}");
 
                 Article deleteArticle = new Article();
 
                 // Finds the article to be deleted using an ID
-                deleteArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+                deleteArticle = await _articleCollection.Find(x => x.ArticleID == articleId).FirstAsync<Article>();
 
                 if (deleteArticle.Images != null)
                 {
@@ -244,7 +255,7 @@ namespace ArticleServiceAPI.Service
                 }
 
                 // Creates filter for a specific article using an ID
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", articleId);
 
                 // Deletes the article from article collection
                 await _articleCollection.DeleteOneAsync(filter);
@@ -253,7 +264,7 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved deleteArticle: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
@@ -262,7 +273,7 @@ namespace ArticleServiceAPI.Service
         // Returns a list of all articles in the database
         public async Task<List<Article>> GetAllArticles()
         {
-            _logger.LogInformation($"getAll endpoint kaldt");
+            _logger.LogInformation($"[*] GetAllArticles() called: Fetching all articles in the database");
 
             try
             {
@@ -275,56 +286,56 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved getAllArticles: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
         }
 
         // Returns a specific article from the database using an ID
-        public async Task<Article> GetArticleByID(string id)
+        public async Task<Article> GetArticleByID(string articleId)
         {
             try
             {
-                _logger.LogInformation($"GetArticleByID kaldt med id: {id}");
+                _logger.LogInformation($"[*] GetArticleByID(string articleId) called: Fetching article with articleId: {articleId}");
 
                 Article article = new Article();
 
                 // Finds the article using an ID
-                article = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+                article = await _articleCollection.Find(x => x.ArticleID == articleId).FirstAsync<Article>();
 
                 return article;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved GetArticleByID: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
         }
 
         // Deletes an image from a list of images for a specific article 
-        public async Task<Article> RemoveImageFromArticle(string id, string image_id)
+        public async Task<Article> RemoveImageFromArticle(string articleId, string imageId)
         {
-            _logger.LogInformation($"RemoveImage kaldt med Art. ID = {id} og Image ID = {image_id}");
+            _logger.LogInformation($"[*] RemoveImageFromArticle(string articleId, string imageId) called: Deleting an image with imageId {imageId} from the article with articleId {articleId}");
 
             try
             {
                 Article getArticle = new Article();
 
                 // Finds the article where the image is going to be deleted from 
-                getArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstOrDefaultAsync<Article>();
+                getArticle = await _articleCollection.Find(x => x.ArticleID == articleId).FirstOrDefaultAsync<Article>();
 
                 Image removedImage = new Image();
 
                 // Finds the image in the list to be deleted
-                removedImage = getArticle.Images.Find(x => x.ImageID == image_id);
+                removedImage = getArticle.Images.Find(x => x.ImageID == imageId);
 
                 // Deletes the image
                 getArticle.Images.Remove(removedImage);
 
                 // Creates filter for a specific article using an ID
-                var filter = Builders<Article>.Filter.Eq("ArticleID", id); 
+                var filter = Builders<Article>.Filter.Eq("ArticleID", articleId); 
 
                 // Stages the update of document property "Images" without the removes image
                 var update = Builders<Article>.Update.Set("Images", getArticle.Images);
@@ -341,21 +352,21 @@ namespace ArticleServiceAPI.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved removeImage: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
         }
 
         // Updates the estimated price of an article
-        public async Task<string> UpdateEstimatedPrice(string id, double price)
+        public async Task<string> UpdateEstimatedPrice(string articleId, double price)
         {
-            _logger.LogInformation($"updatePrice endpoint kaldt");
+            _logger.LogInformation($"[*] UpdateEstimatedPrice(string articleId, double price) called: Updating the estimated price of the article with articleId {articleId}");
 
             try
             {
                 // Creates filter for a specific article using an ID
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", articleId);
 
                 // Stages the update of document property "Estimated" with the new price
                 var update = Builders<Article>.Update.Set("EstimatedPrice", price);
@@ -363,31 +374,31 @@ namespace ArticleServiceAPI.Service
                 // Updates the article in our database
                 await _articleCollection.UpdateOneAsync(filter, update);
 
-                return $"Article with ID: {id} updated with estimated price: {price}";
+                return $"Article with ID: {articleId} updated with estimated price: {price}";
 
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved updatePrice: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }
         }
 
         // Updates the "Sold" status of an article 
-        public async Task<string> UpdateSoldStatus(string id)
+        public async Task<string> UpdateSoldStatus(string articleId)
         {
-            _logger.LogInformation($"updateSold endpoint kaldt");
+            _logger.LogInformation($"[*] UpdateSoldStatus(string articleId) called: Updating the status of the article {articleId}");
 
             try
             {
                 Article updateArticle = new Article();
 
                 // Finds the document to be updated using the ID
-                updateArticle = await _articleCollection.Find(x => x.ArticleID == id).FirstAsync<Article>();
+                updateArticle = await _articleCollection.Find(x => x.ArticleID == articleId).FirstAsync<Article>();
 
                 // Creates filter for a specific article using an ID
-                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", id);
+                FilterDefinition<Article> filter = Builders<Article>.Filter.Eq("ArticleID", articleId);
 
                 // Logic to determine whether to change the bool to true or false
                 if (updateArticle.Sold == true)
@@ -398,7 +409,7 @@ namespace ArticleServiceAPI.Service
                     // Updates the document
                     await _articleCollection.UpdateOneAsync(filter, update);
 
-                    return $"Article with ID: {id} updated as sold: false";
+                    return $"Article with ID: {articleId} updated as sold: false";
 
                 }
                 else
@@ -409,14 +420,14 @@ namespace ArticleServiceAPI.Service
                     // Updates the document
                     await _articleCollection.UpdateOneAsync(filter, update);
 
-                    return $"Article with ID: {id} updated as sold: true";
+                    return $"Article with ID: {articleId} updated as sold: true";
 
                 }
 
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Fejl ved updateSold: {ex.Message}");
+                _logger.LogError($"EXCEPTION CAUGHT: {ex.Message}");
 
                 throw;
             }

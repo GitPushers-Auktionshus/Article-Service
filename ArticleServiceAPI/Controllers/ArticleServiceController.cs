@@ -40,37 +40,47 @@ public class ArticleServiceController : ControllerBase
     [HttpPost("addArticle")]
     public async Task<Article> AddArticle(ArticleDTO articleDTO)
     {
+        _logger.LogInformation($"[POST] addArticle endpoint reached");
+
         return await _service.AddNewArticle(articleDTO);
     }
 
 
     //DELETE - Removes an article
     [Authorize]
-    [HttpDelete("deleteArticle/{id}")]
-    public async Task<Article> DeleteArticle(string id)
+    [HttpDelete("deleteArticle/{articleId}")]
+    public async Task<Article> DeleteArticle(string articleId)
     {
-        return await _service.DeleteArticleByID(id);
+        _logger.LogInformation($"[DELETE] deleteArticle/{articleId} endpoint reached");
+
+        return await _service.DeleteArticleByID(articleId);
     }
 
     //GET - Gets an article by ID
-    [HttpGet("getArticle/{id}")]
-    public async Task<Article> GetArticle(string id)
+    [HttpGet("getArticle/{articleId}")]
+    public async Task<Article> GetArticle(string articleId)
     {
-        return await _service.GetArticleByID(id);
+        _logger.LogInformation($"[GET] getArticle/{articleId} endpoint reached");
+
+        return await _service.GetArticleByID(articleId);
     }
 
     //GET - Return a list of all articles
     [HttpGet("getAll")]
     public async Task<List<Article>> GetAll()
     {
+        _logger.LogInformation($"[GET] getAll endpoint reached");
+
         return await _service.GetAllArticles();
     }
 
     //POST - Adds a new image
     [Authorize]
-    [HttpPut("addArticleImage/{id}"), DisableRequestSizeLimit]
-    public List<Uri> AddArticleImage(string id)
+    [HttpPut("addArticleImage/{articleId}"), DisableRequestSizeLimit]
+    public List<Uri> AddArticleImage(string articleId)
     {
+        _logger.LogInformation($"[PUT] addArticleImage/{articleId} endpoint reached");
+
         List<Uri> images = new List<Uri>();
 
         try
@@ -87,31 +97,37 @@ public class ArticleServiceController : ControllerBase
             throw;
         }
 
-        return _service.AddImageToArticle(images, id);
+        return _service.AddImageToArticle(images, articleId);
 
     }
 
     //DELETE - Removes an image
     [Authorize]
-    [HttpPut("removeImage/{id}/{image_id}")]
-    public async Task<Article> RemoveImage(string id, string image_id)
+    [HttpPut("removeImage/{articleId}/{imageId}")]
+    public async Task<Article> RemoveImage(string articleId, string imageId)
     {
-        return await _service.RemoveImageFromArticle(id, image_id);
+        _logger.LogInformation($"[PUT] removeImage/{articleId}/{imageId} endpoint reached");
+
+        return await _service.RemoveImageFromArticle(articleId, imageId);
     }
 
     //PUT - Updates estimated price of an article
     [Authorize]
-    [HttpPut("updatePrice/{id}/{price}")]
-    public async Task<string> UpdatePrice(string id, double price)
+    [HttpPut("updatePrice/{articleId}/{price}")]
+    public async Task<string> UpdatePrice(string articleId, double price)
     {
-        return await _service.UpdateEstimatedPrice(id, price);
+        _logger.LogInformation($"[PUT] updatePrice/{articleId}/{price} endpoint reached");
+
+        return await _service.UpdateEstimatedPrice(articleId, price);
     }
 
     //PUT - Marks an article as sold
     [Authorize]
-    [HttpPut("updateSold/{id}")]
-    public async Task<string> UpdateSold(string id)
+    [HttpPut("updateSold/{articleId}")]
+    public async Task<string> UpdateSold(string articleId)
     {
-        return await _service.UpdateSoldStatus(id);
+        _logger.LogInformation($"[PUT] updateSold/{articleId} endpoint reached");
+
+        return await _service.UpdateSoldStatus(articleId);
     }
 }

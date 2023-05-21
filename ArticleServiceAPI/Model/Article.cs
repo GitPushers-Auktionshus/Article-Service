@@ -18,7 +18,7 @@ namespace ArticleServiceAPI.Model
         public bool Sold { get; set; }
         public Auctionhouse Auctionhouse { get; set; }
         public User Seller { get; set; }
-        public float MinPrice { get; set; }
+        public double MinPrice { get; set; }
         public User Buyer { get; set; }
 
         public Article()
