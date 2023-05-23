@@ -15,7 +15,7 @@ namespace ArticleServiceAPI.Model
         public bool Sold { get; set; }
         public string AuctionhouseID { get; set; }
         public string SellerID { get; set; }
-        public float MinPrice { get; set; }
+        public double MinPrice { get; set; }
         public string BuyerID { get; set; }
 
         public ArticleDTO()
