@@ -6,16 +6,13 @@ namespace ArticleServiceAPI.Service
 {
 	public interface IArticleRepository
 	{
-<<<<<<< HEAD
-		public Task<ArticleDTO> AddNewArticle(ArticleDTO articleDTO);
-=======
         /// <summary>
         /// Adds a new article to the database
         /// </summary>
         /// <param name="articleDTO"></param>
         /// <returns>The article that's been created</returns>
-		public Task<Article> AddNewArticle(ArticleDTO articleDTO);
->>>>>>> c0108341c344dbbd3c845a795df5c6d0e8a8ffd1
+        public Task<ArticleDTO> AddNewArticle(ArticleDTO articleDTO);
+
 
         /// <summary>
         /// Deletes a selected article from the database based on the provided article ID
