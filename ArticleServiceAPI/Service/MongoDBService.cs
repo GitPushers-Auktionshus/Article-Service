@@ -184,7 +184,7 @@ namespace ArticleServiceAPI.Service
         }
 
         // Adds new article document to the database
-        public async Task<ArticleDTO> AddNewArticle(ArticleDTO articleDTO)
+        public async Task<Article> AddNewArticle(ArticleDTO articleDTO)
         {
             try
             {
@@ -200,12 +200,10 @@ namespace ArticleServiceAPI.Service
                 Auctionhouse auctionhouse = new Auctionhouse();
                 auctionhouse = await _auctionHouseCollection.Find(x => x.AuctionhouseID == articleDTO.AuctionhouseID).FirstOrDefaultAsync<Auctionhouse>();
 
-                articleDTO.ArticleID = ObjectId.GenerateNewId().ToString();
-
                 // Creates an article to be added to our database
                 Article addArticle = new Article
                 {
-                    ArticleID = articleDTO.ArticleID,
+                    ArticleID = ObjectId.GenerateNewId().ToString(),
                     Name = articleDTO.Name,
                     NoReserve = articleDTO.NoReserve,
                     EstimatedPrice = articleDTO.EstimatedPrice,
@@ -222,7 +220,7 @@ namespace ArticleServiceAPI.Service
                 // Adds article to the article collection
                 await _articleCollection.InsertOneAsync(addArticle);
 
-                return articleDTO;
+                return addArticle;
             }
             catch (Exception ex)
             {

@@ -11,7 +11,7 @@ namespace ArticleServiceAPI.Service
         /// </summary>
         /// <param name="articleDTO"></param>
         /// <returns>The article that's been created</returns>
-        public Task<ArticleDTO> AddNewArticle(ArticleDTO articleDTO);
+        public Task<Article> AddNewArticle(ArticleDTO articleDTO);
 
 
         /// <summary>

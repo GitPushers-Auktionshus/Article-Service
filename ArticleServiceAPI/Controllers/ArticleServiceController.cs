@@ -44,8 +44,8 @@ public class ArticleServiceController : ControllerBase
 
         try
         {
-            await _service.AddNewArticle(articleDTO);
-            return CreatedAtAction("GetArticle", new { articleId = articleDTO.ArticleID }, articleDTO);
+            Article article = await _service.AddNewArticle(articleDTO);
+            return CreatedAtAction("GetArticle", new { articleId = article.ArticleID }, article);
         }
         catch (Exception ex)
         {

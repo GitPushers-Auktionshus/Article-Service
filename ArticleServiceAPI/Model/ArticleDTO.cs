@@ -7,7 +7,6 @@ namespace ArticleServiceAPI.Model
 {
     public class ArticleDTO
     {
-        public string? ArticleID { get; set; }
         public string Name { get; set; }
         public bool NoReserve { get; set; }
         public double EstimatedPrice { get; set; }
