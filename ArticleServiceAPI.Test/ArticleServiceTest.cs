@@ -34,12 +34,14 @@ public class Tests
     public async Task TestAddArticleEndpoint_valid_dto()
     {
         // Arrange
-        var articleDTO = CreateArticle("Test Article");
+        var articleDTO = CreateArticleDTO("Test Article");
+        var article = CreateArticle("Test Article ID");
+
 
         var stubRepo = new Mock<IArticleRepository>();
 
         stubRepo.Setup(svc => svc.AddNewArticle(articleDTO))
-            .Returns(Task.FromResult<ArticleDTO?>(articleDTO));
+            .Returns(Task.FromResult<Article?>(article));
 
         var controller = new ArticleServiceController(_logger, _configuration, stubRepo.Object);
 
@@ -48,7 +50,7 @@ public class Tests
 
         // Assert
         Assert.That(result, Is.TypeOf<CreatedAtActionResult>());
-        Assert.That((result as CreatedAtActionResult)?.Value, Is.TypeOf<ArticleDTO>());
+        Assert.That((result as CreatedAtActionResult)?.Value, Is.TypeOf<Article>());
     }
 
     // Tests the AddArticle method when an error is thrown in the AddNewArticle method from our repository
@@ -56,7 +58,7 @@ public class Tests
     public async Task TestAddArticleEndpoint_failure_posting()
     {
         // Arrange
-        var articleDTO = CreateArticle("Test Article");
+        var articleDTO = CreateArticleDTO("Test Article");
 
         var stubRepo = new Mock<IArticleRepository>();
 
@@ -77,7 +79,7 @@ public class Tests
     /// </summary>
     /// <param name="articleName"></param>
     /// <returns></returns>
-    private ArticleDTO CreateArticle(string articleName)
+    private ArticleDTO CreateArticleDTO(string articleName)
     {
         var articleDTO = new ArticleDTO()
         {
@@ -94,6 +96,33 @@ public class Tests
         };
 
         return articleDTO;
+
+    }
+
+    /// <summary>
+    /// Helper method for creating Article instances.
+    /// </summary>
+    /// <param name="articleID"></param>
+    /// <returns></returns>
+    private Article CreateArticle(string articleID)
+    {
+        var article = new Article()
+        {
+            ArticleID = "1",
+            Name = "Test Name",
+            NoReserve = true,
+            EstimatedPrice = 100,
+            Description = "Test Description",
+            Images = new List<Image>(),
+            Category = "TT",
+            Sold = false,
+            Auctionhouse = new Auctionhouse(),
+            Seller = new User(),
+            MinPrice = 50,
+            Buyer = new User()
+        };
+
+        return article;
 
     }
 }
