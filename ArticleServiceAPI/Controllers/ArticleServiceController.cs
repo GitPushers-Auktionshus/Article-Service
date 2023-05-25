@@ -38,11 +38,20 @@ public class ArticleServiceController : ControllerBase
     //POST - Adds a new article
     [Authorize]
     [HttpPost("addArticle")]
-    public async Task<Article> AddArticle(ArticleDTO articleDTO)
+    public async Task<IActionResult> AddArticle(ArticleDTO articleDTO)
     {
         _logger.LogInformation($"[POST] addArticle endpoint reached");
 
-        return await _service.AddNewArticle(articleDTO);
+        try
+        {
+            await _service.AddNewArticle(articleDTO);
+            return CreatedAtAction("GetArticle", new { articleId = articleDTO.ArticleID }, articleDTO);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while adding a new article.");
+            return BadRequest();
+        }
     }
 
 

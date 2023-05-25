@@ -6,7 +6,7 @@ namespace ArticleServiceAPI.Service
 {
 	public interface IArticleRepository
 	{
-		public Task<Article> AddNewArticle(ArticleDTO articleDTO);
+		public Task<ArticleDTO> AddNewArticle(ArticleDTO articleDTO);
 
         public Task<Article> DeleteArticleByID(string id);
 
