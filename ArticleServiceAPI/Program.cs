@@ -21,50 +21,52 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Retrieves Vault hostname from dockercompose file
-    string hostnameVault = Environment.GetEnvironmentVariable("HostnameVault") ?? "none";
+    /// Vault removed for deployment purposes
 
-    // Sets up the Vault using the endpoint of the Vault
-    var EndPoint = $"http://{hostnameVault}:8200/";
-    var httpClientHandler = new HttpClientHandler();
-    httpClientHandler.ServerCertificateCustomValidationCallback =
-    (message, cert, chain, sslPolicyErrors) => { return true; };
+    //// Retrieves Vault hostname from dockercompose file
+    //string hostnameVault = Environment.GetEnvironmentVariable("HostnameVault") ?? "none";
 
-    // Initialize one of the several auth methods.
-    IAuthMethodInfo authMethod =
-    new TokenAuthMethodInfo("00000000-0000-0000-0000-000000000000");
+    //// Sets up the Vault using the endpoint of the Vault
+    //var EndPoint = $"http://{hostnameVault}:8200/";
+    //var httpClientHandler = new HttpClientHandler();
+    //httpClientHandler.ServerCertificateCustomValidationCallback =
+    //(message, cert, chain, sslPolicyErrors) => { return true; };
 
-    // Initialize vault settings.
-    var vaultClientSettings = new VaultClientSettings(EndPoint, authMethod)
-    {
-        Namespace = "",
-        MyHttpClientProviderFunc = handler => new HttpClient(httpClientHandler)
-        {
-            BaseAddress = new Uri(EndPoint)
-        }
-    };
+    //// Initialize one of the several auth methods.
+    //IAuthMethodInfo authMethod =
+    //new TokenAuthMethodInfo("00000000-0000-0000-0000-000000000000");
 
-    // Initialize vault client
-    IVaultClient vaultClient = new VaultClient(vaultClientSettings);
+    //// Initialize vault settings.
+    //var vaultClientSettings = new VaultClientSettings(EndPoint, authMethod)
+    //{
+    //    Namespace = "",
+    //    MyHttpClientProviderFunc = handler => new HttpClient(httpClientHandler)
+    //    {
+    //        BaseAddress = new Uri(EndPoint)
+    //    }
+    //};
 
-    // Uses vault client to read key-value secrets.
+    //// Initialize vault client
+    //IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 
-    Secret<SecretData> environmentVariables = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "environmentVariables", mountPoint: "secret");
-    Secret<SecretData> connectionString = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "connectionStrings", mountPoint: "secret");
+    //// Uses vault client to read key-value secrets.
 
-    // Initialized string variables to store enviroment secrets
-    string? secret = environmentVariables.Data.Data["Secret"].ToString();
-    string? issuer = environmentVariables.Data.Data["Issuer"].ToString();
-    string? connectionURI = connectionString.Data.Data["ConnectionURI"].ToString();
+    //Secret<SecretData> environmentVariables = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "environmentVariables", mountPoint: "secret");
+    //Secret<SecretData> connectionString = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "connectionStrings", mountPoint: "secret");
+
+    //// Initialized string variables to store enviroment secrets
+    //string? secret = environmentVariables.Data.Data["Secret"].ToString();
+    //string? issuer = environmentVariables.Data.Data["Issuer"].ToString();
+    //string? connectionURI = connectionString.Data.Data["ConnectionURI"].ToString();
 
     // Creates and EnviromentVariable object with a dictionary to contain the secrets
     EnvVariables vaultSecrets = new EnvVariables
     {
         dictionary = new Dictionary<string, string>
         {
-            { "Secret", secret },
-            { "Issuer", issuer },
-            { "ConnectionURI", connectionURI }
+            { "Secret", Environment.GetEnvironmentVariable("Secret") ?? "none" },
+            { "Issuer", Environment.GetEnvironmentVariable("Issuer") ?? "none" },
+            { "ConnectionURI", Environment.GetEnvironmentVariable("ConnectionURI") ?? "none" }
         }
     };
 
@@ -72,7 +74,7 @@ try
     // It can now be accessed wihtin the entire projekt
     builder.Services.AddSingleton<EnvVariables>(vaultSecrets);
 
-    logger.Info($"Variables loaded in program.cs: Secret: {secret}, Issuer: {issuer}, ConnectionURI : {connectionURI}");
+    logger.Info($"Variables loaded in program.cs: Secret: {vaultSecrets.dictionary["Secret"]}, Issuer: {vaultSecrets.dictionary["Issuer"]}, ConnectionURI : {vaultSecrets.dictionary["Issuer"]}");
 
     builder.Services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -84,9 +86,9 @@ try
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = issuer,
+                ValidIssuer = vaultSecrets.dictionary["Issuer"],
                 IssuerSigningKey =
-                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(vaultSecrets.dictionary["Secret"]))
             };
         }
         );
